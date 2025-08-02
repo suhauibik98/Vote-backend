@@ -19,34 +19,19 @@ console.log("PORT:", process.env.PORT);
 console.log("===================================");
 //start server
 app.use(express.json());
-app.use(cors({
-  origin: function (origin, callback) {
-    console.log("🔍 Request origin:", origin);
-    
-    // Allow requests with no origin (mobile apps, curl, etc.)
-    if (!origin) return callback(null, true);
-    
-    const allowedOrigins = [
-      "https://vote-frontend-beta.vercel.app",
-      "https://vote-frontend-git-main-akour98s-projects.vercel.app", 
-      "https://vote-frontend-ob6qxd14v-akour98s-projects.vercel.app",
-      process.env.FR_URL
-    ];
-    
-    console.log("✅ Allowed origins:", allowedOrigins);
-    console.log("🎯 Origin match:", allowedOrigins.includes(origin));
-    
-    if (allowedOrigins.includes(origin)) {
-      return callback(null, true);
-    }
-    
-    console.log("❌ CORS blocked origin:", origin);
-    return callback(null, true); // Temporarily allow all for debugging
-  },
+app.use(
+  cors({
+   origin: [
+     "https://vote-frontend-beta.vercel.app",
+     "https://vote-frontend-git-main-akour98s-projects.vercel.app",
+     "https://vote-frontend-ob6qxd14v-akour98s-projects.vercel.app",
+     process.env.FR_URL
+   ],
+  methods: ["GET", "POST", "PUT", "DELETE" , "PATCH"],
+  allowedHeaders: ["Content-Type", "Authorization"],
   credentials: true,
-  methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-  allowedHeaders: ["Content-Type", "Authorization"]
-}));
+})
+);
 app.use(cookieParser());
 // app.use(mongoSanitize({ replaceWith: "_", allowDots: false }));
 
