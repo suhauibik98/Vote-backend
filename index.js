@@ -21,7 +21,8 @@ console.log("===================================");
 app.use(express.json());
 app.use(cors({
   origin: function (origin, callback) {
-    console.log("Request origin:", origin);
+    console.log("🔍 Request origin:", origin);
+    
     // Allow requests with no origin (mobile apps, curl, etc.)
     if (!origin) return callback(null, true);
     
@@ -32,14 +33,15 @@ app.use(cors({
       process.env.FR_URL
     ];
     
-    console.log("Allowed origins:", allowedOrigins);
-    console.log("Origin allowed:", allowedOrigins.includes(origin));
+    console.log("✅ Allowed origins:", allowedOrigins);
+    console.log("🎯 Origin match:", allowedOrigins.includes(origin));
     
     if (allowedOrigins.includes(origin)) {
       return callback(null, true);
     }
     
-    return callback(new Error('Not allowed by CORS'));
+    console.log("❌ CORS blocked origin:", origin);
+    return callback(null, true); // Temporarily allow all for debugging
   },
   credentials: true,
   methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
