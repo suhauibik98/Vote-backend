@@ -19,6 +19,7 @@ app.use(
   cors({
    origin: [
      "https://vote-frontend-beta.vercel.app",
+     "https://vote-frontend-git-main-akour98s-projects.vercel.app",
      "https://vote-frontend-ob6qxd14v-akour98s-projects.vercel.app",
      process.env.FR_URL
    ],
