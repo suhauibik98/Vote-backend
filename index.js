@@ -17,7 +17,11 @@ const rateLimit = require("express-rate-limit");
 app.use(express.json());
 app.use(
   cors({
-   origin: process.env.FR_URL,
+   origin: [
+     "https://vote-frontend-beta.vercel.app",
+     "https://vote-frontend-ob6qxd14v-akour98s-projects.vercel.app",
+     process.env.FR_URL
+   ],
   methods: ["GET", "POST", "PUT", "DELETE" , "PATCH"],
   allowedHeaders: ["Content-Type", "Authorization"],
   credentials: true,
