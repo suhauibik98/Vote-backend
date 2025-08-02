@@ -12,22 +12,39 @@ const cron = require('node-cron');
 const { checkAndUpdateVoteStatusBulk} = require("./utils/checkAndUpdateVoteStatus")
 const rateLimit = require("express-rate-limit");
 
-
+console.log("=== ENVIRONMENT VARIABLES DEBUG ===");
+console.log("FR_URL:", process.env.FR_URL);
+console.log("NODE_ENV:", process.env.NODE_ENV);
+console.log("PORT:", process.env.PORT);
+console.log("===================================");
 //start server
 app.use(express.json());
-app.use(
-  cors({
-   origin: [
-     "https://vote-frontend-beta.vercel.app",
-     "https://vote-frontend-git-main-akour98s-projects.vercel.app",
-     "https://vote-frontend-ob6qxd14v-akour98s-projects.vercel.app",
-     process.env.FR_URL
-   ],
-  methods: ["GET", "POST", "PUT", "DELETE" , "PATCH"],
-  allowedHeaders: ["Content-Type", "Authorization"],
+app.use(cors({
+  origin: function (origin, callback) {
+    console.log("Request origin:", origin);
+    // Allow requests with no origin (mobile apps, curl, etc.)
+    if (!origin) return callback(null, true);
+    
+    const allowedOrigins = [
+      "https://vote-frontend-beta.vercel.app",
+      "https://vote-frontend-git-main-akour98s-projects.vercel.app", 
+      "https://vote-frontend-ob6qxd14v-akour98s-projects.vercel.app",
+      process.env.FR_URL
+    ];
+    
+    console.log("Allowed origins:", allowedOrigins);
+    console.log("Origin allowed:", allowedOrigins.includes(origin));
+    
+    if (allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    
+    return callback(new Error('Not allowed by CORS'));
+  },
   credentials: true,
-})
-);
+  methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"]
+}));
 app.use(cookieParser());
 // app.use(mongoSanitize({ replaceWith: "_", allowDots: false }));
 
