@@ -261,12 +261,12 @@ const addNewVote = async (req, res) => {
   try {
     const {
       voteSubject,
-      startDate,
-      endDate,
-      startTime,
-      endTime,
+      startDateTime,
+      endDateTime,
       candidates = [],
     } = req.body;
+
+    console.log(req.body);
 
     // Enhanced validation schema
     const voteSchema = Joi.object({
@@ -275,29 +275,15 @@ const addNewVote = async (req, res) => {
         "string.max": "Vote subject must be less than 200 characters",
         "any.required": "Vote subject is required",
       }),
-      startDate: Joi.date().iso().required().messages({
-        "date.base": "Start date must be a valid date",
-        "any.required": "Start date is required",
+      startDateTime: Joi.date().iso().required().messages({
+        "date.base": "Start date and time must be a valid ISO date",
+        "any.required": "Start date and time is required",
       }),
-      endDate: Joi.date().iso().min(Joi.ref("startDate")).required().messages({
-        "date.base": "End date must be a valid date",
-        "date.min": "End date must be after or equal to start date",
-        "any.required": "End date is required",
+      endDateTime: Joi.date().iso().min(Joi.ref("startDateTime")).required().messages({
+        "date.base": "End date and time must be a valid ISO date",
+        "date.min": "End date and time must be after start date and time",
+        "any.required": "End date and time is required",
       }),
-      startTime: Joi.string()
-        .pattern(/^([01]\d|2[0-3]):([0-5]\d)$/)
-        .required()
-        .messages({
-          "string.pattern.base": "Start time must be in HH:MM format",
-          "any.required": "Start time is required",
-        }),
-      endTime: Joi.string()
-        .pattern(/^([01]\d|2[0-3]):([0-5]\d)$/)
-        .required()
-        .messages({
-          "string.pattern.base": "End time must be in HH:MM format",
-          "any.required": "End time is required",
-        }),
       candidates: Joi.array()
         .items(
           Joi.object({
@@ -312,10 +298,8 @@ const addNewVote = async (req, res) => {
               .max(500)
               .required()
               .messages({
-                "string.min":
-                  "Candidate description must be at least 5 characters",
-                "string.max":
-                  "Candidate description must be less than 500 characters",
+                "string.min": "Candidate description must be at least 5 characters",
+                "string.max": "Candidate description must be less than 500 characters",
                 "any.required": "Candidate description is required",
               }),
           })
@@ -342,26 +326,26 @@ const addNewVote = async (req, res) => {
       });
     }
 
-    // Create date-time objects for validation
-    const startDateTime = new Date(`${startDate}T${startTime}:00`);
-    const endDateTime = new Date(`${endDate}T${endTime}:00`);
+    // Parse ISO date strings directly
+    const start = new Date(startDateTime);
+    const end = new Date(endDateTime);
     const now = new Date();
 
     // Additional date-time validations
-    if (startDateTime <= now) {
+    if (start <= now) {
       return res.status(400).json({
         message: "Start date and time must be in the future",
       });
     }
 
-    if (endDateTime <= startDateTime) {
+    if (end <= start) {
       return res.status(400).json({
         message: "End date and time must be after start date and time",
       });
     }
 
     // Check minimum voting period (1 hour)
-    const diffMs = endDateTime - startDateTime;
+    const diffMs = end - start;
     const diffHours = diffMs / (1000 * 60 * 60);
 
     if (diffHours < 1) {
@@ -380,42 +364,19 @@ const addNewVote = async (req, res) => {
       });
     }
 
-    // Verify candidates exist in database (optional - add if needed)
-    // const User = require('../models/User'); // Adjust path as needed
-    // const existingUsers = await User.find({ _id: { $in: candidateIds } });
-    // if (existingUsers.length !== candidateIds.length) {
-    //   return res.status(400).json({
-    //     message: "One or more candidates do not exist"
-    //   });
-    // }
-
-    // Create new vote
-    // console.log(
-    //   startDateTime <= now && endDateTime > now,
-    //   "start time:",
-    //   startDateTime,
-    //   "end time",
-    //   endDateTime,
-    //   "now :",
-    //   now
-    // );
-
+    // Create new vote with UTC timestamps
     const newVote = new VoteMain({
       voteSubject: voteSubject.trim(),
-      startDate,
-      endDate,
-      startTime,
-      endTime,
-      startDateTime, // Store combined date-time for easier querying
-      endDateTime, // Store combined date-time for easier querying
+      startDateTime: start,
+      endDateTime: end,
       candidates: candidates.map((candidate) => ({
         userId: candidate.id,
         description: candidate.description.trim(),
         votes: [],
-        voteCount: 0, // Initialize vote count
+        voteCount: 0,
       })),
-      isActive: startDateTime <= now && endDateTime > now, // Determine if vote is currently active
-      totalVotes: 0, // Initialize total vote count
+      isActive: start <= now && end > now,
+      totalVotes: 0,
       createdBy: req.user._id,
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -426,8 +387,8 @@ const addNewVote = async (req, res) => {
 
     await sendCreateVoteEmailIfValidWindow(
       voteSubject,
-      startDateTime,
-      endDateTime
+      start,
+      end
     );
 
     return res.status(201).json({
