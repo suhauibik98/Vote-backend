@@ -21,12 +21,7 @@ console.log("===================================");
 app.use(express.json());
 app.use(
   cors({
-   origin: [
-     "https://vote-frontend-beta.vercel.app",
-     "https://vote-frontend-git-main-akour98s-projects.vercel.app",
-     "https://vote-frontend-ob6qxd14v-akour98s-projects.vercel.app",
-     process.env.FR_URL
-   ],
+   origin: "*",
   methods: ["GET", "POST", "PUT", "DELETE" , "PATCH"],
   allowedHeaders: ["Content-Type", "Authorization"],
   credentials: true,
