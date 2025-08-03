@@ -279,6 +279,20 @@ const addNewVote = async (req, res) => {
       return new Date(date.toLocaleString("en-US", {timeZone: "Asia/Amman"}));
     };
 
+    const getJordanDateString = (date = null) => {
+      const targetDate = date || getJordanTime();
+      return targetDate.toLocaleDateString('en-CA'); // YYYY-MM-DD format
+    };
+
+    const getJordanTimeString = (date = null) => {
+      const targetDate = date || getJordanTime();
+      return targetDate.toLocaleTimeString('en-US', {
+        hour12: false,
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    };
+
     // Enhanced validation schema
     const voteSchema = Joi.object({
       voteSubject: Joi.string().trim().min(3).max(200).required().messages({
@@ -354,32 +368,40 @@ const addNewVote = async (req, res) => {
     }
 
     // Create date-time objects for validation using Jordan timezone
+    const jordanNow = getJordanTime();
+    const jordanTodayString = getJordanDateString(jordanNow);
+    const currentJordanTime = getJordanTimeString(jordanNow);
+    
+    // If start date is today, validate time
+    if (startDate === jordanTodayString) {
+      if (startTime <= currentJordanTime) {
+        return res.status(400).json({
+          message: "Start time must be in the future (Jordan timezone)",
+        });
+      }
+    }
+
+    // Create datetime objects for duration validation
     const startDateTimeUTC = new Date(`${startDate}T${startTime}:00`);
     const endDateTimeUTC = new Date(`${endDate}T${endTime}:00`);
     
     // Convert to Jordan timezone for validation
     const startDateTime = toJordanTime(startDateTimeUTC);
     const endDateTime = toJordanTime(endDateTimeUTC);
-    const jordanNow = getJordanTime();
 
     console.log('Jordan timezone validation:', {
       startDateTime: startDateTime.toISOString(),
       endDateTime: endDateTime.toISOString(),
       jordanNow: jordanNow.toISOString(),
+      jordanTodayString,
+      currentJordanTime,
       startDateOriginal: startDate,
       startTimeOriginal: startTime,
       endDateOriginal: endDate,
       endTimeOriginal: endTime
     });
 
-    // Additional date-time validations using Jordan time (with 1 minute tolerance)
-    const oneMinuteAgo = new Date(jordanNow.getTime() - 60 * 1000);
-    if (startDateTime <= oneMinuteAgo) {
-      return res.status(400).json({
-        message: "Start date and time must be in the future (Jordan timezone)",
-      });
-    }
-
+    // Additional date-time validations using Jordan time
     if (endDateTime <= startDateTime) {
       return res.status(400).json({
         message: "End date and time must be after start date and time",
