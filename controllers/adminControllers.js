@@ -268,18 +268,90 @@ const addNewVote = async (req, res) => {
       candidates = [],
     } = req.body;
 
-    // Helper function to convert to Jordan timezone
+    // Jordan timezone utility functions
+    const getJordanTime = (date = null) => {
+      const targetDate = date || new Date();
+      return new Date(targetDate.toLocaleString("en-US", {timeZone: "Asia/Amman"}));
+    };
+
     const toJordanTime = (dateTimeString) => {
       const date = new Date(dateTimeString);
       return new Date(date.toLocaleString("en-US", {timeZone: "Asia/Amman"}));
     };
 
-    const getJordanNow = () => {
-      const now = new Date();
-      return new Date(now.toLocaleString("en-US", {timeZone: "Asia/Amman"}));
-    };
+    // Enhanced validation schema
+    const voteSchema = Joi.object({
+      voteSubject: Joi.string().trim().min(3).max(200).required().messages({
+        "string.min": "Vote subject must be at least 3 characters",
+        "string.max": "Vote subject must be less than 200 characters",
+        "any.required": "Vote subject is required",
+      }),
+      startDate: Joi.date().iso().required().messages({
+        "date.base": "Start date must be a valid date",
+        "any.required": "Start date is required",
+      }),
+      endDate: Joi.date().iso().min(Joi.ref("startDate")).required().messages({
+        "date.base": "End date must be a valid date",
+        "date.min": "End date must be after or equal to start date",
+        "any.required": "End date is required",
+      }),
+      startTime: Joi.string()
+        .pattern(/^([01]\d|2[0-3]):([0-5]\d)$/)
+        .required()
+        .messages({
+          "string.pattern.base": "Start time must be in HH:MM format",
+          "any.required": "Start time is required",
+        }),
+      endTime: Joi.string()
+        .pattern(/^([01]\d|2[0-3]):([0-5]\d)$/)
+        .required()
+        .messages({
+          "string.pattern.base": "End time must be in HH:MM format",
+          "any.required": "End time is required",
+        }),
+      candidates: Joi.array()
+        .items(
+          Joi.object({
+            id: Joi.string().length(24).hex().required().messages({
+              "string.length": "Invalid candidate ID format",
+              "string.hex": "Invalid candidate ID format",
+              "any.required": "Candidate ID is required",
+            }),
+            description: Joi.string()
+              .trim()
+              .min(5)
+              .max(500)
+              .required()
+              .messages({
+                "string.min":
+                  "Candidate description must be at least 5 characters",
+                "string.max":
+                  "Candidate description must be less than 500 characters",
+                "any.required": "Candidate description is required",
+              }),
+          })
+        )
+        .min(2)
+        .unique("id")
+        .required()
+        .messages({
+          "array.min": "At least 2 candidates are required",
+          "array.unique": "Duplicate candidates are not allowed",
+          "any.required": "Candidates are required",
+        }),
+    });
 
-    // ... existing validation schema ...
+    // Validate request body
+    const { error } = voteSchema.validate(req.body, { abortEarly: false });
+    if (error) {
+      const errorMessage = error.details
+        .map((detail) => detail.message)
+        .join(", ");
+      return res.status(400).json({
+        message: errorMessage,
+        errors: error.details,
+      });
+    }
 
     // Create date-time objects for validation using Jordan timezone
     const startDateTimeUTC = new Date(`${startDate}T${startTime}:00`);
@@ -288,12 +360,16 @@ const addNewVote = async (req, res) => {
     // Convert to Jordan timezone for validation
     const startDateTime = toJordanTime(startDateTimeUTC);
     const endDateTime = toJordanTime(endDateTimeUTC);
-    const jordanNow = getJordanNow();
+    const jordanNow = getJordanTime();
 
     console.log('Jordan timezone validation:', {
       startDateTime: startDateTime.toISOString(),
       endDateTime: endDateTime.toISOString(),
-      jordanNow: jordanNow.toISOString()
+      jordanNow: jordanNow.toISOString(),
+      startDateOriginal: startDate,
+      startTimeOriginal: startTime,
+      endDateOriginal: endDate,
+      endTimeOriginal: endTime
     });
 
     // Additional date-time validations using Jordan time
@@ -333,33 +409,51 @@ const addNewVote = async (req, res) => {
       }
     }
 
-    // ... existing candidate validations ...
+    // Check for duplicate candidate IDs
+    const candidateIds = candidates.map((c) => c.id);
+    const uniqueIds = new Set(candidateIds);
 
-    // Create new vote with Jordan timezone dates
+    if (candidateIds.length !== uniqueIds.size) {
+      return res.status(400).json({
+        message: "Duplicate candidates are not allowed",
+      });
+    }
+
+    // Verify candidates exist in database (optional - uncomment if needed)
+    // const User = require('../models/User'); // Adjust path as needed
+    // const existingUsers = await User.find({ _id: { $in: candidateIds } });
+    // if (existingUsers.length !== candidateIds.length) {
+    //   return res.status(400).json({
+    //     message: "One or more candidates do not exist"
+    //   });
+    // }
+
+    // Create new vote with Jordan timezone considerations
     const newVote = new VoteMain({
       voteSubject: voteSubject.trim(),
       startDate,
       endDate,
       startTime,
       endTime,
-      startDateTime: startDateTime, // Store Jordan timezone
-      endDateTime: endDateTime,   // Store Jordan timezone
+      startDateTime: startDateTime, // Store Jordan timezone datetime
+      endDateTime: endDateTime,   // Store Jordan timezone datetime
       candidates: candidates.map((candidate) => ({
         userId: candidate.id,
         description: candidate.description.trim(),
         votes: [],
-        voteCount: 0,
+        voteCount: 0, // Initialize vote count
       })),
-      isActive: startDateTime <= jordanNow && endDateTime > jordanNow,
-      totalVotes: 0,
+      isActive: startDateTime <= jordanNow && endDateTime > jordanNow, // Determine if vote is currently active using Jordan time
+      totalVotes: 0, // Initialize total vote count
       createdBy: req.user._id,
-      createdAt: getJordanNow(), // Use Jordan time
-      updatedAt: getJordanNow(), // Use Jordan time
+      createdAt: getJordanTime(), // Use Jordan time for creation timestamp
+      updatedAt: getJordanTime(), // Use Jordan time for update timestamp
     });
 
     // Save to database
     const savedVote = await newVote.save();
 
+    // Send email notification using Jordan timezone
     await sendCreateVoteEmailIfValidWindow(
       voteSubject,
       startDateTime,
@@ -375,11 +469,32 @@ const addNewVote = async (req, res) => {
         endDateTime: savedVote.endDateTime,
         candidatesCount: savedVote.candidates.length,
         isActive: savedVote.isActive,
+        timezone: "Asia/Amman (Jordan)",
       },
     });
   } catch (error) {
     console.error("Error creating vote:", error.message, error.stack);
-    // ... existing error handling ...
+
+    // Handle MongoDB duplicate key errors
+    if (error.code === 11000) {
+      return res.status(400).json({
+        message: "A vote with this subject already exists",
+      });
+    }
+
+    // Handle validation errors
+    if (error.name === "ValidationError") {
+      const errorMessages = Object.values(error.errors).map(
+        (err) => err.message
+      );
+      return res.status(400).json({
+        message: errorMessages.join(", "),
+      });
+    }
+
+    return res.status(500).json({
+      message: "Internal server error. Please try again later.",
+    });
   }
 };
 
