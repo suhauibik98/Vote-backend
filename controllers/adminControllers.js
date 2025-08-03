@@ -268,31 +268,6 @@ const addNewVote = async (req, res) => {
       candidates = [],
     } = req.body;
 
-    // Jordan timezone utility functions
-    const getJordanTime = (date = null) => {
-      const targetDate = date || new Date();
-      return new Date(targetDate.toLocaleString("en-US", {timeZone: "Asia/Amman"}));
-    };
-
-    const toJordanTime = (dateTimeString) => {
-      const date = new Date(dateTimeString);
-      return new Date(date.toLocaleString("en-US", {timeZone: "Asia/Amman"}));
-    };
-
-    const getJordanDateString = (date = null) => {
-      const targetDate = date || getJordanTime();
-      return targetDate.toLocaleDateString('en-CA'); // YYYY-MM-DD format
-    };
-
-    const getJordanTimeString = (date = null) => {
-      const targetDate = date || getJordanTime();
-      return targetDate.toLocaleTimeString('en-US', {
-        hour12: false,
-        hour: '2-digit',
-        minute: '2-digit'
-      });
-    };
-
     // Enhanced validation schema
     const voteSchema = Joi.object({
       voteSubject: Joi.string().trim().min(3).max(200).required().messages({
@@ -367,41 +342,18 @@ const addNewVote = async (req, res) => {
       });
     }
 
-    // Create date-time objects for validation using Jordan timezone
-    const jordanNow = getJordanTime();
-    const jordanTodayString = getJordanDateString(jordanNow);
-    const currentJordanTime = getJordanTimeString(jordanNow);
-    
-    // If start date is today, validate time
-    if (startDate === jordanTodayString) {
-      if (startTime <= currentJordanTime) {
-        return res.status(400).json({
-          message: "Start time must be in the future (Jordan timezone)",
-        });
-      }
+    // Create date-time objects for validation
+    const startDateTime = new Date(`${startDate}T${startTime}:00`);
+    const endDateTime = new Date(`${endDate}T${endTime}:00`);
+    const now = new Date();
+
+    // Additional date-time validations
+    if (startDateTime <= now) {
+      return res.status(400).json({
+        message: "Start date and time must be in the future",
+      });
     }
 
-    // Create datetime objects for duration validation
-    const startDateTimeUTC = new Date(`${startDate}T${startTime}:00`);
-    const endDateTimeUTC = new Date(`${endDate}T${endTime}:00`);
-    
-    // Convert to Jordan timezone for validation
-    const startDateTime = toJordanTime(startDateTimeUTC);
-    const endDateTime = toJordanTime(endDateTimeUTC);
-
-    console.log('Jordan timezone validation:', {
-      startDateTime: startDateTime.toISOString(),
-      endDateTime: endDateTime.toISOString(),
-      jordanNow: jordanNow.toISOString(),
-      jordanTodayString,
-      currentJordanTime,
-      startDateOriginal: startDate,
-      startTimeOriginal: startTime,
-      endDateOriginal: endDate,
-      endTimeOriginal: endTime
-    });
-
-    // Additional date-time validations using Jordan time
     if (endDateTime <= startDateTime) {
       return res.status(400).json({
         message: "End date and time must be after start date and time",
@@ -418,20 +370,6 @@ const addNewVote = async (req, res) => {
       });
     }
 
-    // Additional validation for same-day votes in Jordan timezone
-    if (startDate === endDate) {
-      const startTime24 = new Date(`1970-01-01T${startTime}:00`);
-      const endTime24 = new Date(`1970-01-01T${endTime}:00`);
-      const timeDiffMs = endTime24 - startTime24;
-      const timeDiffHours = timeDiffMs / (1000 * 60 * 60);
-      
-      if (timeDiffHours < 1) {
-        return res.status(400).json({
-          message: "For same-day voting, end time must be at least 1 hour after start time",
-        });
-      }
-    }
-
     // Check for duplicate candidate IDs
     const candidateIds = candidates.map((c) => c.id);
     const uniqueIds = new Set(candidateIds);
@@ -442,7 +380,7 @@ const addNewVote = async (req, res) => {
       });
     }
 
-    // Verify candidates exist in database (optional - uncomment if needed)
+    // Verify candidates exist in database (optional - add if needed)
     // const User = require('../models/User'); // Adjust path as needed
     // const existingUsers = await User.find({ _id: { $in: candidateIds } });
     // if (existingUsers.length !== candidateIds.length) {
@@ -451,32 +389,41 @@ const addNewVote = async (req, res) => {
     //   });
     // }
 
-    // Create new vote with Jordan timezone considerations
+    // Create new vote
+    // console.log(
+    //   startDateTime <= now && endDateTime > now,
+    //   "start time:",
+    //   startDateTime,
+    //   "end time",
+    //   endDateTime,
+    //   "now :",
+    //   now
+    // );
+
     const newVote = new VoteMain({
       voteSubject: voteSubject.trim(),
       startDate,
       endDate,
       startTime,
       endTime,
-      startDateTime: startDateTime, // Store Jordan timezone datetime
-      endDateTime: endDateTime,   // Store Jordan timezone datetime
+      startDateTime, // Store combined date-time for easier querying
+      endDateTime, // Store combined date-time for easier querying
       candidates: candidates.map((candidate) => ({
         userId: candidate.id,
         description: candidate.description.trim(),
         votes: [],
         voteCount: 0, // Initialize vote count
       })),
-      isActive: startDateTime <= jordanNow && endDateTime > jordanNow, // Determine if vote is currently active using Jordan time
+      isActive: startDateTime <= now && endDateTime > now, // Determine if vote is currently active
       totalVotes: 0, // Initialize total vote count
       createdBy: req.user._id,
-      createdAt: getJordanTime(), // Use Jordan time for creation timestamp
-      updatedAt: getJordanTime(), // Use Jordan time for update timestamp
+      createdAt: new Date(),
+      updatedAt: new Date(),
     });
 
     // Save to database
     const savedVote = await newVote.save();
 
-    // Send email notification using Jordan timezone
     await sendCreateVoteEmailIfValidWindow(
       voteSubject,
       startDateTime,
@@ -492,7 +439,6 @@ const addNewVote = async (req, res) => {
         endDateTime: savedVote.endDateTime,
         candidatesCount: savedVote.candidates.length,
         isActive: savedVote.isActive,
-        timezone: "Asia/Amman (Jordan)",
       },
     });
   } catch (error) {
