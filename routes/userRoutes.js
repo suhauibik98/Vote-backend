@@ -1,7 +1,7 @@
 const express = require("express")
 const router = express.Router()
 const { verifyUser } = require("../middleware/verifyUser")
-const { getDataForDashBoard,getCommingVote,getVotedListUser , getVoteMainActive  , userVote, editProfile } = require("../controllers/userControllers")
+const { getDataForDashBoard,getVotedListUserForActive,getCommingVote,getVotedListUser , getVoteMainActive  , userVote, editProfile } = require("../controllers/userControllers")
 const { signout } = require("../controllers/authControllers")
 
 
@@ -10,6 +10,8 @@ const { signout } = require("../controllers/authControllers")
 router.get("/logout" ,verifyUser,  signout )
 
 router.get("/get-voted-list-user" , verifyUser , getVotedListUser)
+
+router.get("/get-voted-list-user-for-active" , verifyUser , getVotedListUserForActive)
 
 router.get("/get-vote-main-active" ,verifyUser,  getVoteMainActive )
 

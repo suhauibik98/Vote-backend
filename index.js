@@ -12,11 +12,6 @@ const cron = require('node-cron');
 const { checkAndUpdateVoteStatusBulk} = require("./utils/checkAndUpdateVoteStatus")
 const rateLimit = require("express-rate-limit");
 
-console.log("=== ENVIRONMENT VARIABLES DEBUG ===");
-console.log("FR_URL:", process.env.FR_URL);
-console.log("NODE_ENV:", process.env.NODE_ENV);
-console.log("PORT:", process.env.PORT);
-console.log("===================================");
 //start server
 app.use(express.json());
 app.use(

@@ -36,7 +36,6 @@ const jwt = require("jsonwebtoken");
 
 const verifyAdmin = async (req, res, next) => {
   try {
-    console.log("🔍 verifyAdmin middleware - checking auth..."); // ✅ Add debug logging
     
     // Check both cookies and Authorization header
     let accessToken = req.cookies.authToken;
@@ -44,11 +43,9 @@ const verifyAdmin = async (req, res, next) => {
     // If no token in cookies, check Authorization header
     if (!accessToken) {
       const authHeader = req.headers.authorization;
-      console.log("🔍 Authorization header:", authHeader); // ✅ Debug log
       
       if (authHeader && authHeader.startsWith('Bearer ')) {
         accessToken = authHeader.substring(7); // Remove "Bearer " prefix
-        console.log("🔍 Token from header:", accessToken ? 'EXISTS' : 'NULL'); // ✅ Debug log
       }
     } else {
       console.log("🔍 Token from cookies:", accessToken ? 'EXISTS' : 'NULL'); // ✅ Debug log
@@ -65,7 +62,6 @@ const verifyAdmin = async (req, res, next) => {
         return res.status(403).json({ message: "Access Forbidden" });
       }
 
-      console.log("✅ JWT verified, decoded token:", decodedToken); // ✅ Debug log
 
       const user = await Users.findById(decodedToken.id);
       if (!user) {
@@ -78,7 +74,6 @@ const verifyAdmin = async (req, res, next) => {
         return res.status(403).json({ message: "Access Forbidden - Not Admin" });
       }
       
-      console.log("✅ Admin access granted for:", user.email); // ✅ Debug log
       req.user = user;
       next();
     });

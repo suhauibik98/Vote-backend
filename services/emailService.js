@@ -47,6 +47,7 @@ const sendOTPEmail = async (email, otp) => {
         
         <div style="text-align: center; margin-top: 20px; color: #9ca3af; font-size: 12px;">
           <p>© 2025 Employee Portal. All rights reserved.</p>
+          <a href="https://vote-frontend-xi.vercel.app">https://vote-frontend-xi.vercel.app/</a>
         </div>
       </div>
     `,
@@ -183,6 +184,8 @@ const sendCreateVoteEmailIfValidWindow = async (
       <div style="text-align: center; margin-top: 20px; color: #9ca3af; font-size: 12px;">
         <p>📧 Sent to: ${toEmail}</p>
         <p>© 2025 Vote Portal. All rights reserved.</p>
+        <a href="https://vote-frontend-xi.vercel.app">https://vote-frontend-xi.vercel.app/</a>
+
       </div>
     </div>
   `;

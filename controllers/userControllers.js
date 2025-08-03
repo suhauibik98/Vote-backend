@@ -237,6 +237,63 @@ const getVotedListUser = async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 };
+const getVotedListUserForActive = async (req, res) => {
+  try {
+    const user = await Users.findById(req.user._id)
+      .populate({
+        path: "votedList.voteMainId",
+        select: "voteSubject startDateTime endDateTime candidates isActive",
+      })
+      .lean();
+
+    if (!user) {
+      return res.status(400).json({ message: "User not found" });
+    }
+
+
+
+    const paginatedList = user.votedList
+      .sort((a, b) => new Date(b.voteDate) - new Date(a.voteDate))
+     
+
+    const response = [];
+
+    for (const voteItem of paginatedList) {
+      const vote = voteItem.voteMainId;
+      if (!vote) continue; // تخطي العناصر التي لم تُملأ عبر populate
+
+      const candidates = vote.candidates.map((candidate) => {
+        const isVoted = candidate.votes?.some(
+          (v) => v.userId?.toString() === req.user._id.toString()
+        );
+
+        return {
+          _id: candidate._id,
+          description: candidate.description,
+          isVoted: !!isVoted,
+          voteDate: isVoted ? voteItem.voteDate : null,
+        };
+      });
+
+      response.push({
+        voteMainId: vote._id,
+        voteSubject: vote.voteSubject,
+        startDateTime: vote.startDateTime,
+        endDateTime: vote.endDateTime,
+        isActive: vote.isActive,
+        candidates,
+      });
+    }
+
+    res.status(200).json({
+      votedList: response,
+      
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
 
 
 const getCommingVote = async (req, res) => {
@@ -335,4 +392,5 @@ module.exports = {
   getDataForDashBoard,
   getVotedListUser,
   getCommingVote,
+  getVotedListUserForActive
 };
