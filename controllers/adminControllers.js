@@ -372,8 +372,9 @@ const addNewVote = async (req, res) => {
       endTimeOriginal: endTime
     });
 
-    // Additional date-time validations using Jordan time
-    if (startDateTime <= jordanNow) {
+    // Additional date-time validations using Jordan time (with 1 minute tolerance)
+    const oneMinuteAgo = new Date(jordanNow.getTime() - 60 * 1000);
+    if (startDateTime <= oneMinuteAgo) {
       return res.status(400).json({
         message: "Start date and time must be in the future (Jordan timezone)",
       });
