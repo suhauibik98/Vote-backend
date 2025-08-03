@@ -699,6 +699,8 @@ const getUpcommingVote = async (req, res) => {
 };
 
 const getDataForDashBoardAdmin = async (req, res) => {
+    console.log("🎯 Dashboard route hit by user:", req.user.email); // ✅ Add this
+
   try {
     // Basic counts
     const totalVote = await VoteMain.countDocuments({ isActive: true });
@@ -836,6 +838,7 @@ const getDataForDashBoardAdmin = async (req, res) => {
 
     const lastVote = lastVoteAgg || null;
     const engagement = engagementStats[0] || { totalUsers: 0, activeUsers: 0, averageVotesPerUser: 0 };
+    console.log("✅ Dashboard data retrieved successfully"); // ✅ Add this
 
     res.status(200).json({
       // Basic metrics
