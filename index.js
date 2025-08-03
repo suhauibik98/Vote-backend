@@ -21,7 +21,7 @@ console.log("===================================");
 app.use(express.json());
 app.use(
   cors({
-   origin: "*",
+   origin: process.env.FR_URL,
   methods: ["GET", "POST", "PUT", "DELETE" , "PATCH"],
   allowedHeaders: ["Content-Type", "Authorization"],
   credentials: true,
