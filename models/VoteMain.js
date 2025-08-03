@@ -9,24 +9,24 @@ const voteMainSchema = new mongoose.Schema(
       minlength: 3,
       maxlength: 200,
     },
-    startDate: {
-      type: Date,
-      required: true,
-    },
-    endDate: {
-      type: Date,
-      required: true,
-    },
-    startTime: {
-      type: String,
-      required: true,
-      match: /^([01]\d|2[0-3]):([0-5]\d)$/,
-    },
-    endTime: {
-      type: String,
-      required: true,
-      match: /^([01]\d|2[0-3]):([0-5]\d)$/,
-    },
+    // startDate: {
+    //   type: Date,
+    //   required: true,
+    // },
+    // endDate: {
+    //   type: Date,
+    //   required: true,
+    // },
+    // startTime: {
+    //   type: String,
+    //   required: true,
+    //   match: /^([01]\d|2[0-3]):([0-5]\d)$/,
+    // },
+    // endTime: {
+    //   type: String,
+    //   required: true,
+    //   match: /^([01]\d|2[0-3]):([0-5]\d)$/,
+    // },
     startDateTime: {
       type: Date,
       required: true,
